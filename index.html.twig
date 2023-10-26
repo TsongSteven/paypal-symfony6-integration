@@ -1,0 +1,189 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Payment{% endblock %}
+
+{% block body %}
+<div class="_pages_header_bg">
+    <h1 class="text-white"><b>Payment</b></h1>
+</div>
+
+<div class="container mt-5">
+    <div class="card">
+        <div class="card-body">
+            {{ form_start(form,{'attr':{'novalidate': 'novalidate','id':'donate-form'}}) }}
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-outline mb-2">
+                            <label class="form-label donation-form-label">Full name</label>
+                            {{ form_widget(form.full_name,{'attr':{'class':'donation-form-input'}}) }}
+                            <div class="text-danger donation-validation" id="error-full_name">
+                                {{ form_errors(form.full_name)}}
+                            </div>
+                        </div>
+                        <div class="form-outline mb-2">
+                            <label class="form-label donation-form-label">Email</label>
+                            {{ form_widget(form.email,{'attr':{'class':'donation-form-input'}}) }}
+                            <div class="text-danger donation-validation" id="error-email">
+                                {{ form_errors(form.email)}}
+                            </div>
+                        </div>
+                        <div class="row mb-2">
+                            <div class="col">
+                                <label class="form-label donation-form-label">Phone No</label>
+                               {{ form_widget(form.phone,{'attr':{'class':'donation-form-input'}}) }}
+                                <div class="text-danger donation-validation" id="error-phone">
+                                    {{ form_errors(form.phone)}}
+                                </div>
+                            </div>
+                            <div class="col">
+                                <label class="form-label donation-form-label">Zip/Pin Code</label>
+                                 {{ form_widget(form.pin,{'attr':{'class':'donation-form-input'}}) }}
+                                <div class="text-danger donation-validation" id="error-pin">
+                                    {{ form_errors(form.pin)}}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-outline mb-2">
+                            <label class="form-label donation-form-label">Address</label>
+                            {{ form_widget(form.address,{'attr':{'class':'donation-form-input'}}) }}
+                            <div class="text-danger donation-validation" id="error-address">
+                                {{ form_errors(form.address)}}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="h-100">
+                            <p class="text-center">How much would you like to donate? As a contributor to NGO Donation
+                                we
+                                make
+                                sure your donation goes directly to supporting our cause. Thank you for your generosity!
+                            </p>
+                            <div class="mb-2">
+                                <div class="input-group input-container">
+                                    <i class="fa-solid fa-dollar-sign input-icon"></i>
+                                    {{ form_widget(form.amount,{'attr':{'class':'donation-form-input'}}) }}
+                                </div>
+                                <div class="text-danger donation-validation" id="error-amount">
+                                    {{ form_errors(form.amount)}}
+                                </div>
+                            </div>
+                            <div class="row mt-3 text-center price">
+                                <div class="col-md-4 ">
+                                    <div class="bg-price-donation" id="tenDollar">$10</div>
+                                </div>
+                                <div class="col-md-4 ">
+                                    <div class="bg-price-donation" id="twentyDollar">$20</div>
+                                </div>
+                                <div class="col-md-4 ">
+                                    <div class="bg-price-donation" id="fiftyDollar">$50</div>
+                                </div>
+                            </div>
+                            <div class="row mt-3 text-center text-white price">
+                                <div class="col-md-4 ">
+                                    <div class="bg-price-donation" id="hundredDollar">$100</div>
+                                </div>
+                                <div class="col-md-4 ">
+                                    <div class="bg-price-donation" id="twoFiftyDollar">$250</div>
+                                </div>
+                                <div class="col-md-4 ">
+                                    <div class="bg-price-donation" id="customDollar">Custom</div>
+                                </div>
+                            </div>
+                            <div id="paypal-button-container" class="mt-4"></div>
+                            <p id="result-message"></p>
+                        </div>
+                    </div>
+                </div>
+            {{ form_end(form) }}
+        </div>
+    </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.5.1.js"></script>
+<script src="https://www.paypal.com/sdk/js?client-id=AVgysO3goklzIaZbNvAnLRQz9LSDf1oNwl3tDwrtA_dV3c5eEXLXL3DvIjQP4Z_haUrZhDlytuX2UPLd&components=buttons&enable-funding=paylater,venmo,card" data-sdk-integration-source="integrationbuilder_sc"></script>
+<script>
+    $(document).ready(function () {
+      let hasError = true;
+      window.paypal.Buttons({
+        style: {
+          shape: "rect",
+          layout: "vertical",
+        },
+        async createOrder() {
+          try {
+            const response = await fetch("/api/orders", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                amount: $('#donation_amount').val(),
+              }),
+            });
+
+            const orderData = JSON.parse(await response.json());
+
+            if (orderData.id) {
+              return orderData.id;
+            } else {
+              const errorDetail = orderData?.details?.[0];
+              const errorMessage = errorDetail
+                ? `${errorDetail.issue} ${errorDetail.description} (${orderData.debug_id})`
+                : JSON.stringify(orderData);
+
+              throw new Error(errorMessage);
+            }
+          } catch (error) {
+            resultMessage(`Could not initiate PayPal Checkout...<br><br>${error}`);
+          }
+        },
+        async onApprove(onApprovedData, actions) {
+          
+          var formData = {
+                'amount': $('#donation_amount').val(),
+                'full_name': $('#donation_full_name').val(),
+                'phone_no': $('#donation_phone').val(),
+                'email': $('#donation_email').val(),
+                'pin': $('#donation_pin').val(),
+                'address': $('#donation_address').val(),
+            };
+          try {
+            const response = await fetch(`/api/orders/${onApprovedData.orderID}/capture`, {
+              method: "POST",
+              body: JSON.stringify(formData),
+              headers: {
+                "Content-Type": "application/json",
+              },
+            });
+            const orderData = await response.json();
+            const errorDetail = orderData?.details?.[0];
+            if (errorDetail?.issue === "INSTRUMENT_DECLINED") {
+              return actions.restart();
+            } else if (errorDetail) {
+              throw new Error(`${errorDetail.description} (${orderData.debug_id})`);
+            } else if (!orderData.purchase_units) {
+              throw new Error(JSON.stringify(orderData));
+            } else {
+              const transaction =
+                orderData?.purchase_units?.[0]?.payments?.captures?.[0] ||
+                orderData?.purchase_units?.[0]?.payments?.authorizations?.[0];
+      
+              const route = `/orders/completed/${transaction.id}`;
+              window.location.href = route;
+            }
+          } catch (error) {
+            console.error(error);
+            resultMessage(
+              `Sorry, your transaction could not be processed...<br><br>${error}`,
+            );
+          }
+        },
+      }).render("#paypal-button-container");
+
+      function resultMessage(message) {
+        const container = document.querySelector("#result-message");
+        container.innerHTML = message;
+      }
+    });
+
+ </script>
+{% endblock %}
