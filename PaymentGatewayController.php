@@ -32,7 +32,6 @@ class PaymentGatewayController extends AbstractController
         $form->handleRequest($request);
 
         if ($request->isXmlHttpRequest()) {
-            dd($request->getContent());
             return new JsonResponse($validator->getErrorMessages($form));
         }
 
@@ -88,7 +87,7 @@ class PaymentGatewayController extends AbstractController
     public function orders(Request $request)
     {
         $data = json_decode($request->getContent(), true);
-        dd($data);
+        
         $url = Donations::BASE_URL.'/v2/checkout/orders';
         $payload = [
             'intent' => 'CAPTURE',
@@ -153,7 +152,7 @@ class PaymentGatewayController extends AbstractController
 
                 return new JsonResponse($jsonResponse, $httpStatusCode);
             }else{
-                dd($result);
+                 return new JsonResponse('error');
             }
             return new JsonResponse($jsonResponse, $httpStatusCode);
         } catch (Exception $error) {
